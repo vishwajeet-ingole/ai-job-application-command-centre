@@ -1,0 +1,47 @@
+# Dependencies
+node_modules/
+**/node_modules/
+
+# Environment
+.env
+**/.env
+
+# macOS
+.DS_Store
+**/.DS_Store
+
+# Logs
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Uploads
+backend/uploads/
+
+# Build
+dist/
+build/
+
+# Vite
+frontend/dist/
+
+# IDE
+.vscode/
+.idea/
+
+# dependencies
+node_modules/
+*/node_modules/
+
+# backend/frontend node_modules explicitly
+backend/node_modules/
+frontend/node_modules/
+
+# mac + junk
+.DS_Store
+
+# uploads
+backend/uploads/
+
+# env
+.env
