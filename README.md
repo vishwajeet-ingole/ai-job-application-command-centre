@@ -214,7 +214,7 @@ http://localhost:5173
 
 **GitHub Repository:** *(https://github.com/vishwajeet-ingole/ai-job-application-command-centre)* 
 
-**Demo Video:** *(Add YouTube / Drive URL)*
+**Demo Video:** *https://drive.google.com/file/d/1ru5JSKgFVTjFmP2vHfuFqInO1qUOp5yb/view?usp=sharing*
 
 ---
 
