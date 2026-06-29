@@ -189,6 +189,10 @@ npm run dev
 Open:
 
 ```
+Backend:
+http://localhost:5001
+
+Frontend:
 http://localhost:5173
 ```
 
@@ -208,7 +212,7 @@ http://localhost:5173
 
 # 🔗 Demo
 
-**GitHub Repository:** *(Add GitHub URL)*
+**GitHub Repository:** *(https://github.com/vishwajeet-ingole/ai-job-application-command-centre)* 
 
 **Demo Video:** *(Add YouTube / Drive URL)*
 
