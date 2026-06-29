@@ -3,11 +3,18 @@ require("dotenv").config();
 const express = require("express");
 const cors = require("cors");
 const { GoogleGenAI } = require("@google/genai");
+const { LemmaClient } = require("lemma-sdk");
+
+const lemma = new LemmaClient({
+  token: process.env.LEMMA_TOKEN,
+});
 
 const resumeRoute = require("./routes/resume");
 const jobsRoute = require("./routes/jobs");
 
 const app = express();
+
+// Lemma SDK used as workflow infrastructure layer for agent-based job + resume pipelines
 
 /* ---------------- MIDDLEWARE ---------------- */
 app.use(cors({
@@ -18,18 +25,34 @@ app.use(cors({
 
 app.use(express.json());
 
-/* ---------------- ROUTES ---------------- */
-app.use("/resume", resumeRoute);
-app.use("/jobs", jobsRoute);
-
 /* ---------------- GEMINI AI ---------------- */
 const ai = new GoogleGenAI({
   apiKey: process.env.GEMINI_API_KEY,
 });
 
+/* ---------------- ROUTES ---------------- */
+app.use("/resume", resumeRoute);
+app.use("/jobs", jobsRoute);
+
 /* ---------------- HEALTH CHECK ---------------- */
-app.get("/", (req, res) => {
-  res.send("🚀 AI Career OS Backend Running");
+app.get("/", async (req, res) => {
+  try {
+    const pods = await lemma.pods.list();
+
+    res.json({
+      status: "Backend Running",
+      lemmaConnected: true,
+      podCount: pods.length,
+    });
+  } catch (err) {
+    console.error(err);
+
+    res.json({
+      status: "Backend Running",
+      lemmaConnected: false,
+      error: err.message,
+    });
+  }
 });
 
 /* ---------------- CHAT API ---------------- */
@@ -68,10 +91,54 @@ ${message}
     });
 
   } catch (err) {
-    console.error("❌ Chat Error:", err);
+    console.error("Chat Error:", err);
 
     res.status(500).json({
-      reply: "AI service error. Try again.",
+      reply: "AI service error",
+    });
+  }
+});
+
+/* ---------------- JOB ANALYZER API ---------------- */
+app.post("/analyze-job", async (req, res) => {
+  try {
+    const { jobDescription } = req.body;
+
+    if (!jobDescription) {
+      return res.status(400).json({
+        error: "Job description required",
+      });
+    }
+
+    const prompt = `
+Extract structured data from this job post:
+
+Return JSON:
+- role
+- skills_required
+- experience_level
+- key_responsibilities
+- suggested_resume_keywords
+- apply_priority_score (1-10)
+
+Job:
+${jobDescription}
+`;
+
+    const response = await ai.models.generateContent({
+      model: "gemini-2.5-flash",
+      contents: prompt,
+    });
+
+    res.json({
+      analysis: response.text,
+    });
+
+  } catch (err) {
+    console.error("Job Analysis Error:", err);
+
+    res.status(500).json({
+      error: "Job analysis failed",
     });
   }
 });

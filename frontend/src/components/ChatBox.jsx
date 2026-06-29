@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useRef, useEffect } from "react";
 
 export default function ChatBox() {
   const [messages, setMessages] = useState([
@@ -6,19 +6,28 @@ export default function ChatBox() {
   ]);
 
   const [input, setInput] = useState("");
+  const chatRef = useRef(null);
 
-  // ✅ MUST BE async
+  // ✅ AUTO SCROLL
+  useEffect(() => {
+    chatRef.current?.scrollTo(0, chatRef.current.scrollHeight);
+  }, [messages]);
+
+  // ---------------- SEND MESSAGE ----------------
   const send = async () => {
     if (!input.trim()) return;
 
     const userMsg = { role: "user", text: input };
     setMessages((prev) => [...prev, userMsg]);
 
+    const currentInput = input;
+    setInput("");
+
     try {
       const res = await fetch("http://localhost:5001/chat", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ message: input }),
+        body: JSON.stringify({ message: currentInput }),
       });
 
       const data = await res.json();
@@ -35,15 +44,19 @@ export default function ChatBox() {
         { role: "ai", text: "⚠️ Backend not running" },
       ]);
     }
-
-    setInput("");
   };
 
   return (
     <div style={styles.box}>
       <h3>🤖 AI Career Chat</h3>
 
-      <div style={styles.chatWindow}>
+      {/* 💡 Suggestions */}
+      <div style={styles.suggestions}>
+        💡 Try: "Improve my resume", "Interview tips", "DSA roadmap", "Job strategy"
+      </div>
+
+      {/* CHAT WINDOW */}
+      <div style={styles.chatWindow} ref={chatRef}>
         {messages.map((m, i) => (
           <div
             key={i}
@@ -53,25 +66,25 @@ export default function ChatBox() {
             }}
           >
             <span style={m.role === "user" ? styles.user : styles.ai}>
-              {m.text}
+              {m.role === "ai" ? "🤖 " : ""}{m.text}
             </span>
           </div>
         ))}
       </div>
 
+      {/* INPUT ROW */}
       <div style={styles.row}>
-
         <input
-            value={input}
-            onChange={(e) => setInput(e.target.value)}
-            placeholder="Ask about resume, jobs, interviews..."
-            style={styles.input}
-            onKeyDown={(e) => {
-                if (e.key === "Enter") {
-                e.preventDefault();
-                send();
+          value={input}
+          onChange={(e) => setInput(e.target.value)}
+          placeholder="Ask about resume, jobs, interviews..."
+          style={styles.input}
+          onKeyDown={(e) => {
+            if (e.key === "Enter") {
+              e.preventDefault();
+              send();
             }
-        }}
+          }}
         />
 
         <button onClick={send} style={styles.button}>
@@ -82,6 +95,7 @@ export default function ChatBox() {
   );
 }
 
+/* ---------------- STYLES ---------------- */
 const styles = {
   box: {
     marginTop: 20,
@@ -135,7 +149,13 @@ const styles = {
     background: "#e2e8f0",
     padding: "8px 10px",
     borderRadius: 8,
-    color: "black",   // 👈 IMPORTANT FIX
+    color: "black",
     display: "inline-block",
+  },
+
+  suggestions: {
+    fontSize: 12,
+    color: "#94a3b8",
+    marginBottom: 10,
   },
 };

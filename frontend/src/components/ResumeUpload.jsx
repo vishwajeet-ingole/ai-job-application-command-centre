@@ -4,12 +4,16 @@ import axios from "axios";
 export default function ResumeUpload() {
   const [file, setFile] = useState(null);
   const [result, setResult] = useState("");
+  const [loading, setLoading] = useState(false);
 
   const uploadResume = async () => {
     if (!file) {
       alert("Please select a PDF resume.");
       return;
     }
+
+    setLoading(true);
+    setResult("");
 
     const formData = new FormData();
     formData.append("resume", file);
@@ -27,26 +31,10 @@ export default function ResumeUpload() {
 
       setResult(res.data.analysis);
     } catch (err) {
-      console.error("UPLOAD ERROR:", err);
-
-      if (err.response) {
-        console.log("Backend Error:", err.response.data);
-
-        setResult(
-          `❌ Backend Error
-
-Status: ${err.response.status}
-
-${JSON.stringify(err.response.data, null, 2)}`
-        );
-      } else if (err.request) {
-        setResult(`❌ Backend not responding
-
-${err.message}`);
-      } else {
-        setResult(`❌ ${err.message}`);
-      }
+      setResult("❌ Error analyzing resume. Check backend.");
     }
+
+    setLoading(false);
   };
 
   return (
@@ -56,9 +44,14 @@ ${err.message}`);
         background: "#1e293b",
         padding: 20,
         borderRadius: 10,
+        color: "white",
       }}
     >
       <h2>📄 AI Resume Analyzer</h2>
+
+      <p style={{ fontSize: 12, color: "#94a3b8" }}>
+        Upload your resume and get AI-powered career insights
+      </p>
 
       <input
         type="file"
@@ -71,29 +64,32 @@ ${err.message}`);
 
       <button
         onClick={uploadResume}
+        disabled={loading}
         style={{
           padding: "10px 18px",
-          background: "#3b82f6",
+          background: loading ? "#64748b" : "#3b82f6",
           color: "white",
           border: "none",
           borderRadius: "8px",
-          cursor: "pointer",
+          cursor: loading ? "not-allowed" : "pointer",
+          width: "100%",
         }}
       >
-        Analyze Resume
+        {loading ? "Analyzing Resume..." : "🚀 Analyze Resume with AI"}
       </button>
 
       {result && (
         <div
           style={{
             marginTop: 20,
-            whiteSpace: "pre-wrap",
             background: "#0f172a",
             padding: 15,
-            borderRadius: 8,
-            color: "white",
+            borderRadius: 10,
+            border: "1px solid #334155",
+            whiteSpace: "pre-wrap",
           }}
         >
+          <h3>🤖 AI Resume Analysis Report</h3>
           {result}
         </div>
       )}

@@ -7,6 +7,7 @@ import { getJobs, addJob } from "./services/jobsService";
 export default function App() {
   const [page, setPage] = useState("dashboard");
   const [jobs, setJobs] = useState([]);
+  const [showIntro, setShowIntro] = useState(true);
 
   const [form, setForm] = useState({
     company: "",
@@ -19,7 +20,7 @@ export default function App() {
     const loadJobs = async () => {
       try {
         const data = await getJobs();
-        setJobs(data || []);
+        setJobs(data.jobs || data || []);
       } catch (err) {
         console.log("Error loading jobs:", err);
       }
@@ -36,7 +37,7 @@ export default function App() {
       await addJob(form);
 
       const updated = await getJobs();
-      setJobs(updated || []);
+      setJobs(updated.jobs || updated || []);
 
       setForm({
         company: "",
@@ -48,59 +49,65 @@ export default function App() {
     }
   };
 
+  // ---------------- INTRO SCREEN ----------------
+  if (showIntro) {
+    return (
+      <div style={styles.intro}>
+        <h1>🚀 AI Career OS</h1>
+        <p>
+          Track jobs, get AI insights, and optimize your career in one place
+        </p>
+
+        <button style={styles.button} onClick={() => setShowIntro(false)}>
+          Enter Dashboard
+        </button>
+      </div>
+    );
+  }
+
   return (
     <div style={styles.app}>
       {/* SIDEBAR */}
       <div style={styles.sidebar}>
         <h2>🚀 AI Career OS</h2>
 
-        <div style={styles.menu} onClick={() => setPage("dashboard")}>
+        <div
+          style={{ ...styles.menu, ...(page === "dashboard" && styles.active) }}
+          onClick={() => setPage("dashboard")}
+        >
           📊 Dashboard
         </div>
 
-        <div style={styles.menu} onClick={() => setPage("applications")}>
+        <div
+          style={{ ...styles.menu, ...(page === "applications" && styles.active) }}
+          onClick={() => setPage("applications")}
+        >
           📋 Applications
         </div>
 
-        <div style={styles.menu} onClick={() => setPage("chat")}>
-          🤖 AI Chat
+        <div
+          style={{ ...styles.menu, ...(page === "chat" && styles.active) }}
+          onClick={() => setPage("chat")}
+        >
+          🤖 AI Assistant
         </div>
 
-        <div style={styles.menu} onClick={() => setPage("settings")}>
+        <div
+          style={{ ...styles.menu, ...(page === "settings" && styles.active) }}
+          onClick={() => setPage("settings")}
+        >
           ⚙️ Settings
         </div>
       </div>
 
       {/* MAIN */}
       <div style={styles.main}>
-        <h1>AI Job Application Command Centre</h1>
-        <div style={{
-  display: "grid",
-  gridTemplateColumns: "repeat(4,1fr)",
-  gap: "15px",
-  margin: "20px 0"
-}}>
-  <div style={styles.card}>
-    <h3>{jobs.length}</h3>
-    <p>Total Applications</p>
-  </div>
+        <div style={styles.header}>
+          <h1>🚀 AI Career OS</h1>
+          <p>Your AI-powered job application command centre</p>
+        </div>
 
-  <div style={styles.card}>
-    <h3>{jobs.filter(j => j.status === "Interview").length}</h3>
-    <p>Interviews</p>
-  </div>
-
-  <div style={styles.card}>
-    <h3>{jobs.filter(j => j.status === "Offer").length}</h3>
-    <p>Offers</p>
-  </div>
-
-  <div style={styles.card}>
-    <h3>{jobs.filter(j => j.status === "Rejected").length}</h3>
-    <p>Rejected</p>
-  </div>
-</div>
-
+        {/* DASHBOARD */}
         {page === "dashboard" && (
           <>
             <div style={styles.form}>
@@ -116,9 +123,7 @@ export default function App() {
               <input
                 placeholder="Role"
                 value={form.role}
-                onChange={(e) =>
-                  setForm({ ...form, role: e.target.value })
-                }
+                onChange={(e) => setForm({ ...form, role: e.target.value })}
                 style={styles.input}
               />
 
@@ -139,25 +144,32 @@ export default function App() {
               </button>
             </div>
 
+            <div style={styles.infoText}>
+              📊 Your career progress powered by AI insights
+            </div>
+
             <ApplicationsTable jobs={jobs} setJobs={setJobs} />
           </>
         )}
 
+        {/* APPLICATIONS */}
         {page === "applications" && (
           <ApplicationsTable jobs={jobs} setJobs={setJobs} />
         )}
 
+        {/* CHAT */}
         {page === "chat" && (
-          <>
+          <div>
+            <h2>🤖 AI Career Assistant</h2>
+            <p>Ask anything: resume, jobs, interview prep</p>
             <ChatBox />
             <ResumeUpload />
-          </>
+          </div>
         )}
 
+        {/* SETTINGS */}
         {page === "settings" && (
-          <div style={styles.box}>
-            ⚙️ Settings coming soon...
-          </div>
+          <div style={styles.box}>⚙️ Settings coming soon...</div>
         )}
       </div>
     </div>
@@ -171,7 +183,17 @@ const styles = {
     minHeight: "100vh",
     background: "#0f172a",
     color: "white",
-    fontFamily: "Arial",
+  },
+
+  intro: {
+    height: "100vh",
+    display: "flex",
+    flexDirection: "column",
+    justifyContent: "center",
+    alignItems: "center",
+    background: "#0f172a",
+    color: "white",
+    textAlign: "center",
   },
 
   sidebar: {
@@ -188,9 +210,20 @@ const styles = {
     background: "#111827",
   },
 
+  active: {
+    background: "#2563eb",
+  },
+
   main: {
     flex: 1,
     padding: "30px",
+  },
+
+  header: {
+    background: "linear-gradient(135deg, #2563eb, #1d4ed8)",
+    padding: "20px",
+    borderRadius: "12px",
+    marginBottom: "20px",
   },
 
   form: {
@@ -204,28 +237,26 @@ const styles = {
     borderRadius: "6px",
     border: "none",
     color: "black",
-    background: "white",
   },
 
   button: {
-    padding: "10px",
+    padding: "12px",
     background: "#22c55e",
     border: "none",
     borderRadius: "6px",
     color: "white",
     cursor: "pointer",
+    marginTop: "10px",
   },
 
   box: {
-    marginTop: "20px",
     padding: "20px",
     background: "#1e293b",
     borderRadius: "10px",
   },
-  card: {
-  background: "#1e293b",
-  padding: "20px",
-  borderRadius: "12px",
-  textAlign: "center",
-},
+
+  infoText: {
+    marginBottom: "15px",
+    color: "#94a3b8",
+  },
 };

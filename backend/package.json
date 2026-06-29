@@ -14,6 +14,7 @@
     "cors": "^2.8.5",
     "dotenv": "^17.2.1",
     "express": "^5.2.1",
+    "lemma-sdk": "^0.5.2",
     "multer": "^2.2.0",
     "pdf-parse": "^1.1.1",
     "supertokens-web-js": "^0.16.0"
