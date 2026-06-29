@@ -9,20 +9,27 @@ const jobsRoute = require("./routes/jobs");
 
 const app = express();
 
-/* ---------------- LEMMA SAFE INIT (FIXED) ---------------- */
+/* ---------------- LEMMA SAFE INIT (100% RENDER SAFE) ---------------- */
 let lemma = null;
 
-try {
-  const { LemmaClient } = require("lemma-sdk");
+const initLemma = async () => {
+  try {
+    const sdk = await import("lemma-sdk");
+    const LemmaClient = sdk?.LemmaClient;
 
-  lemma = new LemmaClient({
-    token: process.env.LEMMA_TOKEN,
-  });
+    if (LemmaClient) {
+      lemma = new LemmaClient({
+        token: process.env.LEMMA_TOKEN,
+      });
 
-  console.log("✅ Lemma initialized");
-} catch (err) {
-  console.log("⚠️ Lemma disabled (safe mode - Render fix)");
-}
+      console.log("✅ Lemma initialized safely");
+    }
+  } catch (err) {
+    console.log("⚠️ Lemma disabled (safe fallback mode)");
+  }
+};
+
+initLemma();
 
 /* ---------------- MIDDLEWARE ---------------- */
 app.use(
@@ -49,7 +56,7 @@ app.get("/", async (req, res) => {
   try {
     let podCount = 0;
 
-    if (lemma?.pods?.listByOrganization) {
+    if (lemma && lemma.pods && lemma.pods.listByOrganization) {
       try {
         const pods = await lemma.pods.listByOrganization(
           process.env.LEMMA_ORG_ID
