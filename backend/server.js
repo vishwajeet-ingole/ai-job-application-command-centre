@@ -3,7 +3,6 @@ require("dotenv").config();
 const express = require("express");
 const cors = require("cors");
 const { GoogleGenAI } = require("@google/genai");
-const { LemmaClient } = require("lemma-sdk");
 
 const resumeRoute = require("./routes/resume");
 const jobsRoute = require("./routes/jobs");
@@ -14,6 +13,8 @@ const app = express();
 let lemma = null;
 
 try {
+  const { LemmaClient } = require("lemma-sdk");
+
   lemma = new LemmaClient({
     token: process.env.LEMMA_TOKEN,
   });
@@ -46,11 +47,12 @@ app.get("/", async (req, res) => {
   try {
     let podCount = 0;
 
-    if (lemma) {
+    if (lemma?.pods) {
       try {
         const pods = await lemma.pods.listByOrganization(
           process.env.LEMMA_ORG_ID
         );
+
         podCount = Array.isArray(pods) ? pods.length : 1;
       } catch (err) {
         console.log("⚠️ Lemma restricted mode → fallback active");
@@ -70,7 +72,7 @@ app.get("/", async (req, res) => {
   }
 });
 
-/* ---------------- CHAT API (CLEAN OUTPUT FIXED) ---------------- */
+/* ---------------- CHAT API ---------------- */
 app.post("/chat", async (req, res) => {
   try {
     const { message } = req.body;
@@ -91,7 +93,7 @@ RULES:
 - No unnecessary greetings
 - Be direct and helpful
 
-User query:
+User:
 ${message}
 `;
 
@@ -107,9 +109,7 @@ ${message}
       .replace(/\n{3,}/g, "\n\n")
       .trim();
 
-    res.json({
-      reply,
-    });
+    res.json({ reply });
   } catch (err) {
     console.error("Chat Error:", err);
 
