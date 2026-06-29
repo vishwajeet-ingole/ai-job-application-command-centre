@@ -9,24 +9,20 @@ const jobsRoute = require("./routes/jobs");
 
 const app = express();
 
-/* ---------------- LEMMA SAFE LAZY INIT ---------------- */
+/* ---------------- LEMMA SAFE INIT (FIXED) ---------------- */
 let lemma = null;
 
-const initLemma = async () => {
-  try {
-    const { LemmaClient } = await import("lemma-sdk");
+try {
+  const { LemmaClient } = require("lemma-sdk");
 
-    lemma = new LemmaClient({
-      token: process.env.LEMMA_TOKEN,
-    });
+  lemma = new LemmaClient({
+    token: process.env.LEMMA_TOKEN,
+  });
 
-    console.log("✅ Lemma initialized");
-  } catch (err) {
-    console.log("⚠️ Lemma disabled (Render ESM issue safe fallback)");
-  }
-};
-
-initLemma();
+  console.log("✅ Lemma initialized");
+} catch (err) {
+  console.log("⚠️ Lemma disabled (safe mode - Render fix)");
+}
 
 /* ---------------- MIDDLEWARE ---------------- */
 app.use(
@@ -174,7 +170,7 @@ app.use((req, res) => {
   });
 });
 
-/* ---------------- SERVER START ---------------- */
+/* ---------------- START SERVER ---------------- */
 const PORT = process.env.PORT || 5001;
 
 app.listen(PORT, () => {
