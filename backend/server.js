@@ -31,6 +31,7 @@ const initLemma = async () => {
 
 initLemma();
 
+app.locals.lemma = lemma;
 /* ---------------- MIDDLEWARE ---------------- */
 app.use(
   cors({
