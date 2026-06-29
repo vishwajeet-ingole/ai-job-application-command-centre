@@ -2,25 +2,29 @@ const express = require("express");
 const router = express.Router();
 
 const { LemmaClient } = require("lemma-sdk");
+const { cleanAIText } = require("../utils/cleanAI");
 
-// Lemma SDK
-const lemma = new LemmaClient();
+// Lemma SDK instance
+const lemma = new LemmaClient({
+  podId: process.env.LEMMA_POD_ID,
+});
 
-// In-memory store
 let jobs = [];
 
 /* =========================
-   Lemma Workflow
+   Lemma Workflow (SAFE + FALLBACK)
 ========================= */
 async function careerWorkflow(type, payload) {
   console.log("🚀 Lemma Workflow Triggered:", type);
 
-  let lemmaStatus = "fallback";
+  let lemmaStatus = "restricted_mode";
   let podsFound = 0;
 
   try {
-    // Try calling the SDK
-    const pods = await lemma.pods.list();
+    // IMPORTANT: safe call (no crash)
+    const pods = await lemma.pods.listByOrganization(
+      process.env.LEMMA_ORG_ID
+    );
 
     lemmaStatus = "connected";
     podsFound = Array.isArray(pods) ? pods.length : 1;
@@ -35,9 +39,12 @@ async function careerWorkflow(type, payload) {
     status: lemmaStatus,
     workflow: type,
     podsFound,
-    insight: "AI workflow executed for job application.",
-    suggestion:
-      "Optimize your resume with ATS-friendly keywords like React, JavaScript and Problem Solving.",
+    insight: cleanAIText(
+      "AI workflow executed for job application. Focus on React, JavaScript, Problem Solving."
+    ),
+    suggestion: cleanAIText(
+      "Tailor your resume keywords according to job description for better ATS score."
+    ),
     timestamp: new Date().toISOString(),
   };
 }
@@ -74,7 +81,6 @@ router.post("/", async (req, res) => {
 
   jobs.push(newJob);
 
-  // Trigger Lemma Workflow
   const workflowResult = await careerWorkflow("JOB_ADDED", newJob);
 
   return res.status(201).json({

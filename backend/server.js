@@ -5,27 +5,34 @@ const cors = require("cors");
 const { GoogleGenAI } = require("@google/genai");
 const { LemmaClient } = require("lemma-sdk");
 
-const lemma = new LemmaClient({
-  token: process.env.LEMMA_TOKEN,
-});
-
 const resumeRoute = require("./routes/resume");
 const jobsRoute = require("./routes/jobs");
 
 const app = express();
 
-// Lemma SDK used as workflow infrastructure layer for agent-based job + resume pipelines
+/* ---------------- LEMMA SAFE INIT ---------------- */
+let lemma = null;
+
+try {
+  lemma = new LemmaClient({
+    token: process.env.LEMMA_TOKEN,
+  });
+} catch (err) {
+  console.log("⚠️ Lemma init failed → fallback mode active");
+}
 
 /* ---------------- MIDDLEWARE ---------------- */
-app.use(cors({
-  origin: "http://localhost:5173",
-  methods: ["GET", "POST", "PUT", "DELETE"],
-  credentials: true,
-}));
+app.use(
+  cors({
+    origin: "http://localhost:5173",
+    methods: ["GET", "POST", "PUT", "DELETE"],
+    credentials: true,
+  })
+);
 
 app.use(express.json());
 
-/* ---------------- GEMINI AI ---------------- */
+/* ---------------- GEMINI ---------------- */
 const ai = new GoogleGenAI({
   apiKey: process.env.GEMINI_API_KEY,
 });
@@ -37,25 +44,33 @@ app.use("/jobs", jobsRoute);
 /* ---------------- HEALTH CHECK ---------------- */
 app.get("/", async (req, res) => {
   try {
-    const pods = await lemma.pods.list();
+    let podCount = 0;
+
+    if (lemma) {
+      try {
+        const pods = await lemma.pods.listByOrganization(
+          process.env.LEMMA_ORG_ID
+        );
+        podCount = Array.isArray(pods) ? pods.length : 1;
+      } catch (err) {
+        console.log("⚠️ Lemma restricted mode → fallback active");
+      }
+    }
 
     res.json({
       status: "Backend Running",
-      lemmaConnected: true,
-      podCount: pods.length,
+      lemmaConnected: !!lemma,
+      podCount,
     });
   } catch (err) {
-    console.error(err);
-
     res.json({
       status: "Backend Running",
       lemmaConnected: false,
-      error: err.message,
     });
   }
 });
 
-/* ---------------- CHAT API ---------------- */
+/* ---------------- CHAT API (CLEAN OUTPUT FIXED) ---------------- */
 app.post("/chat", async (req, res) => {
   try {
     const { message } = req.body;
@@ -69,13 +84,12 @@ app.post("/chat", async (req, res) => {
     const prompt = `
 You are an AI Career Coach.
 
-Help users with:
-- Resume improvement
-- Interview preparation
-- Job search strategy
-- DSA guidance
-- Career roadmap
-- Cover letters
+RULES:
+- Reply in 5-8 short lines only
+- No markdown (*, **, #)
+- No long paragraphs
+- No unnecessary greetings
+- Be direct and helpful
 
 User query:
 ${message}
@@ -86,10 +100,16 @@ ${message}
       contents: prompt,
     });
 
-    res.json({
-      reply: response.text,
-    });
+    const reply = (response.text || "")
+      .replace(/\*/g, "")
+      .replace(/#/g, "")
+      .replace(/_/g, "")
+      .replace(/\n{3,}/g, "\n\n")
+      .trim();
 
+    res.json({
+      reply,
+    });
   } catch (err) {
     console.error("Chat Error:", err);
 
@@ -99,7 +119,7 @@ ${message}
   }
 });
 
-/* ---------------- JOB ANALYZER API ---------------- */
+/* ---------------- JOB ANALYZER ---------------- */
 app.post("/analyze-job", async (req, res) => {
   try {
     const { jobDescription } = req.body;
@@ -111,15 +131,14 @@ app.post("/analyze-job", async (req, res) => {
     }
 
     const prompt = `
-Extract structured data from this job post:
+Extract structured job data:
 
-Return JSON:
-- role
-- skills_required
-- experience_level
-- key_responsibilities
-- suggested_resume_keywords
-- apply_priority_score (1-10)
+Role:
+Skills:
+Experience:
+Responsibilities:
+Keywords:
+Priority Score:
 
 Job:
 ${jobDescription}
@@ -131,9 +150,8 @@ ${jobDescription}
     });
 
     res.json({
-      analysis: response.text,
+      analysis: (response.text || "").replace(/\*/g, "").trim(),
     });
-
   } catch (err) {
     console.error("Job Analysis Error:", err);
 
@@ -143,7 +161,7 @@ ${jobDescription}
   }
 });
 
-/* ---------------- 404 HANDLER ---------------- */
+/* ---------------- 404 ---------------- */
 app.use((req, res) => {
   res.status(404).json({
     error: "Route not found",
