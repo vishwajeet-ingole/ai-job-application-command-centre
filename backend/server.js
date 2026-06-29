@@ -9,18 +9,24 @@ const jobsRoute = require("./routes/jobs");
 
 const app = express();
 
-/* ---------------- LEMMA SAFE INIT ---------------- */
+/* ---------------- LEMMA SAFE LAZY INIT ---------------- */
 let lemma = null;
 
-try {
-  const { LemmaClient } = require("lemma-sdk");
+const initLemma = async () => {
+  try {
+    const { LemmaClient } = await import("lemma-sdk");
 
-  lemma = new LemmaClient({
-    token: process.env.LEMMA_TOKEN,
-  });
-} catch (err) {
-  console.log("⚠️ Lemma init failed → fallback mode active");
-}
+    lemma = new LemmaClient({
+      token: process.env.LEMMA_TOKEN,
+    });
+
+    console.log("✅ Lemma initialized");
+  } catch (err) {
+    console.log("⚠️ Lemma disabled (Render ESM issue safe fallback)");
+  }
+};
+
+initLemma();
 
 /* ---------------- MIDDLEWARE ---------------- */
 app.use(
@@ -47,7 +53,7 @@ app.get("/", async (req, res) => {
   try {
     let podCount = 0;
 
-    if (lemma?.pods) {
+    if (lemma?.pods?.listByOrganization) {
       try {
         const pods = await lemma.pods.listByOrganization(
           process.env.LEMMA_ORG_ID
@@ -55,7 +61,7 @@ app.get("/", async (req, res) => {
 
         podCount = Array.isArray(pods) ? pods.length : 1;
       } catch (err) {
-        console.log("⚠️ Lemma restricted mode → fallback active");
+        podCount = 0;
       }
     }
 
@@ -68,6 +74,7 @@ app.get("/", async (req, res) => {
     res.json({
       status: "Backend Running",
       lemmaConnected: false,
+      podCount: 0,
     });
   }
 });
@@ -90,8 +97,8 @@ RULES:
 - Reply in 5-8 short lines only
 - No markdown (*, **, #)
 - No long paragraphs
-- No unnecessary greetings
-- Be direct and helpful
+- No greetings
+- Be direct and useful
 
 User:
 ${message}
@@ -106,7 +113,6 @@ ${message}
       .replace(/\*/g, "")
       .replace(/#/g, "")
       .replace(/_/g, "")
-      .replace(/\n{3,}/g, "\n\n")
       .trim();
 
     res.json({ reply });
