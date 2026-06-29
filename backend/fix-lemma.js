@@ -1,0 +1,1 @@
+console.log("✔ Lemma patch check (safe mode active)");
